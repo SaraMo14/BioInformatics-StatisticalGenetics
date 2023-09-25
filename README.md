@@ -5,6 +5,6 @@ Master projects on Bioinformatics
 
 You can find the cards here :
 
-- [Phylogenetic Trees and Networks](./docs/phylo.md)
+- [Phylogenetic Trees and Networks](./phylo.md)
 - [lab2](./docs/xx.md)
 
