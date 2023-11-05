@@ -13,7 +13,7 @@ You can find the details here :
     - [Report](./lab2/report_lab2.pdf)
 - [Ultrametric and Additive Trees](./lab3)
     - [Assignment](./lab3/bsg-mds-practical-3.pdf)
-    - [Report] (./lab3/report_lab3.pdf)
+    - [Report](./lab3/report_lab3.pdf)
 - [LCA Skeleton Tree](./lab5)
     - [Assignment](./lab5/bsg-mds-practical-5.pdf)
     - [Report](./lab5/report_lab5.pdf)
