@@ -1,0 +1,349 @@
+---
+title: "BSG-MDS practical 1 Statistical Genetics"
+author: "Sara Montese"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  keep_tex: yes
+  pdf_document: default
+---
+
+
+
+```{r}
+library(genetics)
+```
+
+```{r}
+##################### PART 1: SNP DATASET ##################### 
+data <- fread("TSICHR22RAW.raw", header = TRUE)
+print(data)
+genetic_data = data[, 7:ncol(data)]
+print(genetic_data)
+```
+
+```{r}
+#################  Question 1  ################# 
+n_rs <- ncol(genetic_data)
+cat(paste("In the database there are", n_rs , "genetic variants.\n"))
+
+missing_percentage <- mean(is.na(genetic_data)) * 100
+
+cat(paste(missing_percentage, "% of the data is missing."))
+
+
+```
+
+
+```{r}
+
+################# Question 2  ################# 
+
+# create a function to check if a variant is monomorphic
+is_monomorphic <- function(col) {
+  unique_values <- unique(col)
+  # Check if there is only one unique genotype or if there are two genotypes with one being 'NA'
+  length(unique_values) == 1 || (length(unique_values) == 2 && any(is.na(unique_values)))
+}
+
+# apply the function to each column (variant) in genetic_data
+monomorphic_variants_bool <- sapply(genetic_data, is_monomorphic)
+
+# count the number of monomorphic variants
+num_monomorphic <- sum(monomorphic_variants_bool)
+
+percentage_monomorphic <- (num_monomorphic / length(monomorphic_variants_bool)) * 100
+
+cat("Percentage of monomorphic variants: ", percentage_monomorphic,"%" )
+# identify monomorphic variants
+monomorphic_variants <- names(which(monomorphic_variants_bool))
+
+# exclude monomorphic variants
+non_monomorphic_data <- genetic_data[, !monomorphic_variants_bool]
+
+# results
+cat("Number of monomorphic variants excluded:", length(monomorphic_variants), "\n")
+cat("Number of remaining variants:", ncol(non_monomorphic_data), "\n") 
+
+```
+
+```{r}
+
+#################  Question 3  ################# 
+
+variant <- non_monomorphic_data$rs8138488_C
+variant_summary <- summary(as.genotype.allele.count(variant))
+
+# calculate the genotype counts
+genotype_counts <- variant_summary$genotype.freq
+
+# Calculate the Minor Allele Count (MAC)
+mac <- min(variant_summary$allele.freq[1], variant_summary$allele.freq[2])
+
+# Calculate the Minor Allele Frequency (MAF)
+maf <- min(variant_summary$allele.freq[3], variant_summary$allele.freq[4])
+# Print the results
+cat("Genotype counts for rs8138488_C:\n")
+print(genotype_counts)
+
+cat("\n Minor Allele Count (MAC) for rs8138488_C:", mac, "\n")
+
+cat("Minor Allele Frequency (MAF) for rs8138488_C:", maf, "\n")
+
+
+cat("\n Here below the whole summary:")
+print(variant_summary)
+
+```
+
+```{r}
+#################  Question 4  ################# 
+
+# function to calculate MAF for a given marker
+calculate_maf <- function(marker) {
+  marker <- na.omit(marker)
+  sum<-summary(as.genotype.allele.count(marker))$allele.freq
+  maf <- min(sum[3], sum[4])#, na.rm = TRUE)
+  return(maf)
+}
+
+# calculate MAF for all markers
+maf_values <- sapply(non_monomorphic_data, calculate_maf)
+
+# make a histogram of MAF
+hist(maf_values, main = "Minor Allele Frequency Distribution", xlab = "MAF", ylab = "Frequency", col = "lightblue", border = "black", breaks = 30)
+
+cat("Does the MAF follow a uniform distribution? From the histogram, it is shown a non-uniform distribution of minor allele frequencies (MAF). The distribution appears to be skewed towards lower MAF values, resembling a exponential diminishing pattern.\n")
+
+
+
+# Calculate the percentage of markers with MAF below 0.05 and 0.01
+percentage_below_0.05 <- sum(maf_values < 0.05) / length(maf_values) * 100
+percentage_below_0.01 <- sum(maf_values < 0.01) / length(maf_values) * 100
+
+# Print the results
+cat("Percentage of markers with MAF below 0.05:", percentage_below_0.05, "%\n")
+cat("Percentage of markers with MAF below 0.01:", percentage_below_0.01, "%\n")
+
+cat("Can you explain the observed pattern? The non-uniform distribution with high values for low MAFs and an exponential diminishing pattern suggests a population with a prevalence of rare alleles. \n")
+
+```
+
+```{r}
+####################### Question 5 ######################
+
+cat("Observed heterozygosity is a measure of genetic diversity within a population and is calculated as the proportion of individuals in a population that are heterozygous at a given locus. The range of variation for heterozygosity theoretically falls between 0 (no heterozygosity, all individuals are homozygous) and 0.5 (maximum heterozygosity, all individuals are heterozygous).")
+
+
+cat("\n Theoretical range of variation for H0: [0, 0.5]\n")
+
+# function to calculate observed heterozygosity (H0) for a given SNP variant
+calculate_observed_heterozygosity <- function(variant) {
+  # remove NAs from the variant
+  variant <- na.omit(variant)
+  
+  # calculate the proportion of heterozygous individuals
+  heterozygous_proportion <- summary(as.genotype.allele.count(variant))$Hu#$genotype.freq[5]
+
+  return(heterozygous_proportion)
+}
+
+# calculate observed heterozygosity (H0) for all SNP variants
+heterozygosity_values <- sapply(non_monomorphic_data, calculate_observed_heterozygosity)
+
+# histogram of observed heterozygosity
+hist(heterozygosity_values, main = "Observed Heterozygosity Distribution", xlab = "H0", ylab = "Frequency", col = "lightgreen", border = "black")
+
+
+```
+
+```{r}
+# function to calculate expected heterozygosity (He) for a SNP variant
+calculate_expected_heterozygosity <- function(variant) {
+  # remove NAs from the variant
+  variant <- na.omit(variant)
+  # calculate allele frequencies
+  allele_frequencies <-  summary(as.genotype.allele.count(variant))$allele.freq
+  allele_frequency_1  <-allele_frequencies[3]
+  allele_frequency_2 <- allele_frequencies[4]
+  # calculate expected heterozygosity (He)
+  he <- 1 - (allele_frequency_1^2 + allele_frequency_2^2)
+  return(he)
+}
+
+# calculate expected heterozygosity (He) for all SNP variants
+expected_heterozygosity_values <- sapply(non_monomorphic_data, calculate_expected_heterozygosity)
+
+# histogram of expected heterozygosity
+hist(expected_heterozygosity_values, main = "Expected Heterozygosity Distribution", xlab = "He", ylab = "Frequency", col = "lightcoral", border = "black")
+
+cat("Theoretical range of variation for He: [0, 1]\n")
+
+# calculate the average of He for this database
+average_he <- mean(expected_heterozygosity_values, na.rm = TRUE)
+cat("Average of He:", average_he, "\n")
+```
+
+
+
+```{r}
+################ PART 2: STR dataset ###################
+library(HardyWeinberg)
+data(NistSTRs)
+print(NistSTRs)
+
+```
+
+
+```{r}
+################## Question 1 ##################
+individuals <- nrow(NistSTRs)
+STRs <- ncol(NistSTRs)/2
+cat("Number of individuals:", individuals, "\n")
+cat("Number of STRs:", STRs, "\n")
+
+```
+
+```{r}
+#refactor database to have one column for each STR. it will be useful later in the code.
+columns <- seq(1, ncol(NistSTRs))
+column_names <- colnames(NistSTRs)
+new_data <- data.frame(matrix(ncol = 0, nrow = nrow(NistSTRs)))
+
+# Iterate over column pairs
+for (pair_index in seq_along(columns)[-1]) {
+  col1 <- names(NistSTRs)[columns[pair_index - 1]]
+  col2 <- names(NistSTRs)[columns[pair_index]]
+  
+  # combine and rename columns with the common string of the 2 alleles 
+  new_col_name <- unlist(strsplit(column_names[pair_index], "-"))[1]
+
+  new_data[[new_col_name]] <- genotype(paste(NistSTRs[[col1]], NistSTRs[[col2]], sep = "/"))
+  
+}
+
+# resulting dataframe
+print(new_data)
+```
+
+
+```{r}
+##################  Question 2 ##################
+
+# function to calculate the length of the set of unique elements for each pair of alleles
+calculate_set_lengths <- function(dataset) {
+  column_names <- colnames(dataset)
+  set_lengths <- list()
+  
+  for (i in seq(2, ncol(dataset), by = 2) - 1) {
+      # Calculate length of set of unique elements for each pair of columns
+      str <-  unlist(strsplit(column_names[i], "-"))[1]
+      set_lengths[str] <- length(unique(c(dataset[, i], dataset[, i+1])))
+    }
+  
+  return(set_lengths)
+}
+
+set_lengths <- calculate_set_lengths(NistSTRs)
+
+# displaying number of alleles for each STR
+ print(as.data.frame(set_lengths))
+
+# convert the list to a numeric vector
+n_alleles_for_STR <- unlist(set_lengths)
+
+# compute and display statistics
+stats <- c(
+  Mean = mean(n_alleles_for_STR),
+  SD = sd(n_alleles_for_STR),
+  Median = median(n_alleles_for_STR),
+  Min = min(n_alleles_for_STR),
+  Max = max(n_alleles_for_STR)
+)
+
+print(stats)
+
+
+```
+
+
+```{r}
+##################  Question 3 ##################
+print(table(n_alleles_for_STR))
+barplot( table(n_alleles_for_STR), 
+        xlab = "Number of Alleles",
+        ylab = "Number of STRs",
+        main = "Number of STRs for Number of Alleles",
+        col = "skyblue",
+        border = "black"
+)
+
+most_common_alleles<-names(table(n_alleles_for_STR))[which.max(table(n_alleles_for_STR))]
+cat("The most common number of alleles for an STR is ",most_common_alleles )
+```
+
+
+```{r}
+
+##################  Questions 4-5 ##################
+
+observed_heterozygote_list = list()
+expected_heterozygote_list = list()
+
+for (col_index in 1:ncol(new_data)){
+  summary_genotype <- summary(new_data[[col_index]])
+  
+  observed_heterozygote_list[[col_index]] <- summary_genotype$Hu
+  #store n_alleles +1 to access the right information in the summary
+  n_alleles <- length(summary_genotype$allele.names)+1
+  
+    # extract the allele.freq vector
+  allele_freq_vector <- summary_genotype$allele.freq
+  
+  #sum proportions of alleles
+  sum_values <- sum(allele_freq_vector[n_alleles:length(allele_freq_vector)]^2)
+  
+  expected_heterozygote_list[[col_index]] <- 1 - sum_values
+  
+  
+}
+
+cat("Expected heterozygote:")
+print(unlist(expected_heterozygote_list))
+
+cat("Observed heterozygote:")
+print(unlist(observed_heterozygote_list))
+
+# plot histogram of expected heterozygosity
+hist(unlist(expected_heterozygote_list), main = "Histogram of Expected Heterozygosity", xlab = "Expected Heterozygosity", col = "lightblue", border = "black")
+
+# compute the average expected heterozygosity
+average_expected_heterozygosity <- mean(unlist(expected_heterozygote_list))
+cat("Average Expected Heterozygosity:", average_expected_heterozygosity, "\n")
+
+# plot observed against expected heterozygosity
+plot(
+  unlist(expected_heterozygote_list),
+  unlist(observed_heterozygote_list),
+  main = "Observed vs Expected Heterozygosity",
+  xlab = "Expected Heterozygosity",
+  ylab = "Observed Heterozygosity",
+  col = "blue"
+)
+
+cat("What do you observe?")
+cat("From the plot and the values it can be seen that the observed heterozygosity is what would be expected, resulting in a perfect linear relationship between observed and expected heterozygosity. This suggests a population that is in genetic equilibrium with no deviations from the expected patterns of heterozygosity.")
+
+```
+```{r}
+##################  Question 6 ##################
+cat("What differences do you observe between these two types of genetic
+markers?")
+
+cat("The main difference I noticed is that SNPs are typically bi-allelic, meaning there are only two possible alleles at a given locus. As a result, the observed heterozygosity for SNPs can only range from 0 to 0.5, differently from the one for STRs.")
+```
+
+
+
+
