@@ -21,3 +21,13 @@ You can find the details here :
     - [Assignment](./lab6/bsg-mds-practical-6.pdf)
     - [Report](./lab6/report_lab6.pdf)
 
+# Statistical Genetics
+Master projects on Statistical Genetics
+
+## Projects
+
+You can find the details here :
+
+- [..](./lab1)
+    - [Assignment](./lab7/bsg--1.pdf)
+    - [Report](./lab7/...pdf)
