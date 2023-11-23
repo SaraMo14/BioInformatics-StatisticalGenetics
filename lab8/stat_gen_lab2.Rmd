@@ -1,0 +1,244 @@
+---
+title: "Lab 2 - Statistical Genetics"
+author: 
+  name: Sara Montese
+output:
+  word_document: default
+  pdf_document: default
+---
+
+
+
+```{r}
+library(genetics)
+library(data.table)
+library(HardyWeinberg)
+```
+
+
+```{r}
+chunk_size <- 10000 
+raw_data <- fread(file="TSIChr22v4.raw", sep = " ", header = TRUE, nThread = chunk_size)
+raw_data_df <- data.frame(raw_data)
+
+```
+
+```{r} 
+############ Q1 ##############
+
+SNPdata <- raw_data_df[,7:ncol(raw_data_df)]
+
+# Convert values different from 0, 1, or 2 to NA
+SNPdata[!sapply(SNPdata, function(x) x %in% c(0, 1, 2))] <- NA
+
+n <- nrow(SNPdata)# individuals
+p <- ncol(SNPdata) #SNPs
+cat("1. How many variants are there in this database? \n")
+cat(p)
+cat("\n")
+
+cat("1. What percentage of the data is missing? \n")
+mis <- 100*sum(is.na(SNPdata))/(n*p)
+cat(mis)
+
+
+```
+
+
+```{r}
+############ Q2 ##############
+
+# 2. Calculate the percentage of monomorphic variants. 
+mono = which(apply(SNPdata, 2, function(x) length(unique(x[!is.na(x)]))) == 1)
+
+cat("Percentage of monomorphic variants: \n")
+cat(100 * length(mono) / ncol(SNPdata))
+
+# 2. Exclude all monomorphics from the database for 
+#all posterior computations of the practical. 
+SNPpoly = SNPdata[-mono]
+
+cat("How many variants do remain in your database?\n")
+cat(ncol(SNPpoly))
+```
+
+```{r warning=FALSE}
+############ Q3 ##############
+
+rs = SNPpoly[,"rs587756191_T"]
+
+counts <- c(
+  AA=sum(rs==0),
+  AB=sum(rs==1),
+  BB=sum(rs==2)
+)
+
+cat("Genotype counts for rs587756191_T: ")#, counts)
+cat("\n")
+
+cat("AA:", counts[1], "\nAB:", counts[2], "\nBB:", counts[3])
+
+############# # chi-square test ############## 
+# without continuity correction
+results <- HWChisq(counts,cc=0,verbose=TRUE)
+cat("Results chi-square test without continuity correction: ")#
+results
+
+# with continuity correction
+results_cc <- HWChisq(counts,verbose=TRUE)
+cat("Results chi-square test with continuity correction: ")
+results_cc
+
+  
+############## exact test ############## 
+results_ex <- HWExact(counts, pvaluetype="selome", verbose=TRUE)
+cat("Results exact test: ") 
+results_ex
+
+############## permutation test ############## 
+results_perm <- HWPerm(counts,verbose=TRUE)
+cat("Results permutation test: ")
+results_perm
+
+cat("Do you think this variant is in equilibrium? Argue
+your answer")
+
+cat("\n")
+cat("Since the p-value is 1 or close to 1 for the majority of the tests, we fail to reject the null hypothesis.")
+cat("The observed distribution is likely under the assumption of HW equilibrium.")
+cat("On the other hand, we notice that for the Chi-Square test with continuity correction, the p-value is very small.")
+cat("In large sample sizes, the impact of continuity correction is typically less noticeable, and the test without continuity correction may provide accurate results. ")
+
+```
+
+```{r}
+############ Q4 ##############
+
+genotype_counts_matrix <- matrix(0, nrow = ncol(SNPpoly), ncol = 3)
+
+# Loop through each variant
+for (variant in 1:ncol(SNPpoly)) {
+  # Extract genotype counts for the current variant
+  genotype_counts_matrix[variant, 1] <- sum(SNPpoly[, variant] == 0)  # AA
+  genotype_counts_matrix[variant, 2] <- sum(SNPpoly[, variant] == 1)  # AB
+  genotype_counts_matrix[variant, 3] <- sum(SNPpoly[, variant] == 2)  # BB
+}
+#print(genotype_counts_matrix)
+
+```
+
+```{r}
+############ Q5/Q6 ##############
+
+#Apply an exact test for Hardy-Weinberg equilibrium to each SNP.
+
+alpha <-0.05
+HW_pvalues <- HWExactStats(genotype_counts_matrix)
+
+# Calculate percentage of variants that are significant 
+significant_variants <- sum(HW_pvalues < alpha)
+perc_sign_variants <- (significant_variants / length(HW_pvalues)) * 100
+cat("Percentage of significant SNPs at alpha = 0.05: ", perc_sign_variants, "%\n")
+
+cat("Is this the number of markers that you would expect to be out of equilibrium by the effect of chance alone?\n")
+
+cat("By setting the significance level to 0.05, we would expect 5% of the markers to show significant deviation from HWE by chance alone.")
+cat("Therefore, since the percentage of significant SNPs is less than 5%, we can consider it in the expected range due to chance.")
+
+```
+
+```{r}
+############ Q6 ##############
+
+min_pval_index <- which.min(HW_pvalues)
+min_pval <-min(HW_pvalues)
+most_significant_variant_name <- names(SNPpoly)[min_pval_index]
+cat("Most significant variant according to Exact Test:",most_significant_variant_name, "with a p-value of ", min_pval)
+
+most_significant_variant <- SNPpoly[,most_significant_variant_name] 
+
+# genotype counts
+genotype_counts <- c(
+  sum(most_significant_variant==0),
+  sum(most_significant_variant==1),
+  sum(most_significant_variant==2)
+)
+cat("\n")
+cat("Genotype counts for most significant SNP:\n")
+cat("AA:", genotype_counts[1], "\nAB:", genotype_counts[2], "\nBB:", genotype_counts[3])
+
+
+observed_frequencies <- genotype_counts / nrow(SNPpoly)
+
+#compute observed allele frequency for A
+p <- ((2*genotype_counts[1])+(genotype_counts[2]))/(2*nrow(SNPpoly)) 
+# observed allele frequency for B
+q <- 1 - p 
+
+
+#compute expected genotype frequencies under HWE:
+AA_expected_freq <- p^2
+AB_expected_freq <- 2*p*q
+BB_expected_freq <- q^2
+
+
+cat("\nHWE expected AA frequncy:", AA_expected_freq, " | observed frequency:", observed_frequencies[1],
+    "\nHWE expected AB frequency: ", AB_expected_freq, "| observed frequency:", observed_frequencies[2],
+    "\nHWE expected BB frequency: ", BB_expected_freq, "| observed frequency:", observed_frequencies[3]
+    )
+
+cat("\nIn which sense is this genotypic composition unusual?")
+cat("By comparing the expected genotype frequencies under HWE and the observed genotype frequencies, this variant is unusual in the sense that the observed frequency of heterozygous alleles is 0, which we would, in accordance with HWE, expect to be 0.4989082, and this suggests how this variant is not consistent with the HWE")
+```
+
+```{r}
+############ Q7 ##############
+
+inbreeding_factor <- function(genotype_sequence) {
+  genotype_counts <- c(
+    AA=sum(genotype_sequence==0),
+    AB=sum(genotype_sequence==1),
+    BB=sum(genotype_sequence==2)
+  )
+  return(HWf(genotype_counts))
+}
+
+inbreeding_coeffs <- apply(SNPpoly, 2, inbreeding_factor)
+
+# descriptive statistics
+print(summary(inbreeding_coeffs))
+
+hist(inbreeding_coeffs, main="Distribution of Inbreeding Coefficients for SNP", xlab="Inbreeding Coefficient",col = "skyblue", border = "black")
+
+cat("What distribution do you expect f to follow theoretically? Use a probability plot to confirm your idea \n")
+cat("If the population is large and mating is random, as in our example, f can follow an approximately normal distribution. f may be centered in 0 since the observed distribution is likely under the assumption of HW equilibrium.")
+
+
+simulated_normal <- rnorm(length(inbreeding_coeffs), mean = mean(inbreeding_coeffs), sd = sd(inbreeding_coeffs))
+hist(simulated_normal, main = "Simulated Normal Distribution", xlab = "Value", col = "lightgreen", border = "black")
+
+```
+
+```{r}
+
+alpha_values <- c(0.10, 0.05, 0.01, 0.001)
+
+for (alpha in alpha_values) {
+  # Calculate p-values for each SNP
+  HW_pvalues <- HWExactStats(genotype_counts_matrix)
+
+  # Calculate the number of significant variants for the current alpha
+  significant_variants <- sum(HW_pvalues < alpha)
+  perc_sign_variants <- (significant_variants / length(HW_pvalues)) * 100
+
+  cat("Number of significant SNPs at alpha =", alpha, ":", significant_variants, "\n")
+  cat("Percentage of significant SNPs at alpha =", alpha, ":", perc_sign_variants, "%\n")
+  cat("\n")
+}
+
+#State your conclusions
+cat("The results suggest that when we set a stricter significance level for assessing HWE, fewer SNPs are significant. The lower percentages observed at more stringent alpha levels indicate that the majority of SNPs in the dataset conform to HWE. We can conclude that the population is in HWE, however, it's important to note that real populations might not meet the assumptions of the Hardy-Weinberg principle like random mating, no mutation, no migration or large population size")
+
+
+```
+
