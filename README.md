@@ -28,6 +28,21 @@ Master projects on Statistical Genetics
 
 You can find the details here :
 
+- [..](./lab7)
+    - [Assignment](./lab7/.pdf)
+    - [Report](./lab7/...pdf)
+- [..](./lab8)
+    - [Assignment](./lab8/bsg--1.pdf)
+    - [Report](./lab8/...pdf)
+- [Linkage Disequilibrium and Haplotype estimation](./lab9)
+    - [Assignment](./lab9/BSG_MDS_practical_3_LD_HPhasing.pdf)
+    - [Report](./lab9/lab9_final_report.pdf)
+- [..](./lab1)
+    - [Assignment](./lab7/bsg--1.pdf)
+    - [Report](./lab7/...pdf)
+- [..](./lab1)
+    - [Assignment](./lab7/bsg--1.pdf)
+    - [Report](./lab7/...pdf)
 - [..](./lab1)
     - [Assignment](./lab7/bsg--1.pdf)
     - [Report](./lab7/...pdf)
