@@ -45,7 +45,8 @@ You can find the details here :
     - [Assignment](./lab11/BSG_MDS_practical_5_GAS.pdf)
     - [Report](./lab11/practical11.pdf)
     - [Code](./lab11/practical11.Rmd)
+- [Relatedness Analysis](./lab12)
+    - [Assignment](./lab12/BSG_MDS_practical_6_Relatedness_analysis.pdf)
+    - [Report](./lab12/report.pdf)
+    - [Code](./lab12/practical6.py)
 
-- [..](./lab12)
-    - [Assignment](./lab12/bsg--1.pdf)
-    - [Report](./lab12/...pdf)
